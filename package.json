@@ -1,0 +1,23 @@
+{
+  "name": "serverless-dependent-stack-outputs",
+  "version": "1.0.0",
+  "description": "A Serverless Framework pluging to look up other stack outputs",
+  "main": "index.js",
+  "scripts": {},
+  "author": "Eoin Shanaghy <eoin.shanaghy@fourtheorem.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.3",
+    "change-case": "^3.0.2"
+  },
+  "devDependencies": {
+    "husky": "^1.3.1",
+    "prettier": "^1.15.3",
+    "pretty-quick": "^1.8.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
+  }
+}

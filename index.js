@@ -1,52 +1,64 @@
-'use strict';
+'use strict'
 
-class ServerlessPlugin {
-  constructor(serverless, options) {
-    this.serverless = serverless;
-    this.options = options;
+const { snakeCase } = require('change-case')
+const BbPromise = require('bluebird')
 
-    this.commands = {
-      welcome: {
-        usage: 'Helps you start your first Serverless plugin',
-        lifecycleEvents: [
-          'hello',
-          'world',
-        ],
-        options: {
-          message: {
-            usage:
-              'Specify the message you want to deploy '
-              + '(e.g. "--message \'My Message\'" or "-m \'My Message\'")',
-            required: true,
-            shortcut: 'm',
-          },
-        },
-      },
-    };
-
-    this.hooks = {
-      'before:welcome:hello': this.beforeWelcome.bind(this),
-      'welcome:hello': this.welcomeUser.bind(this),
-      'welcome:world': this.displayHelloMessage.bind(this),
-      'after:welcome:world': this.afterHelloWorld.bind(this),
-    };
-  }
-
-  beforeWelcome() {
-    this.serverless.cli.log('Hello from Serverless!');
-  }
-
-  welcomeUser() {
-    this.serverless.cli.log('Your message:');
-  }
-
-  displayHelloMessage() {
-    this.serverless.cli.log(`${this.options.message}`);
-  }
-
-  afterHelloWorld() {
-    this.serverless.cli.log('Please come again!');
+function ServerlessPlugin(serverless, options) {
+  this.serverless = serverless
+  this.options = options
+  this.hooks = {
+    'after:package:initialize': processExports.bind(this)
   }
 }
 
-module.exports = ServerlessPlugin;
+function processExports() {
+  const provider = this.serverless.getProvider('aws')
+  if (!provider) {
+    throw new Error('This plugin requires an AWS provider')
+  }
+  const dependentStacks = this.serverless.service.custom.dependentStacks
+  if (dependentStacks) {
+    const { credentials } = provider.getCredentials()
+    dependentStacks.exports = {}
+
+    let environment = this.serverless.service.provider.environment
+    if (!environment) {
+      environment = {}
+      this.serverless.service.provider.environment = environment
+    }
+
+    return BbPromise.each(dependentStacks.stacks || [], ({ region, name }) => {
+      this.serverless.cli.log(
+        `Finding outputs in dependent stack ${region}:${name}`
+      )
+      const cf = new provider.sdk.CloudFormation({ credentials, region })
+
+      return cf
+        .describeStacks({ StackName: name })
+        .promise()
+        .then(data => {
+          if (data.Stacks) {
+            data.Stacks.forEach(({ Outputs: outputs }) => {
+              outputs
+                .filter(output => !!output.ExportName)
+                .forEach(
+                  ({
+                    OutputKey: key,
+                    OutputValue: value,
+                    ExportName: exportName
+                  }) => {
+                    const envName = snakeCase(exportName).toUpperCase()
+                    this.serverless.cli.log(
+                      `Adding environment variable to provider - ${envName} = ${value}`
+                    )
+                    environment[envName] = value
+                  }
+                )
+            })
+          }
+        })
+    })
+  }
+}
+
+module.exports = ServerlessPlugin
