@@ -23,7 +23,7 @@ plugins:
 
 3. Configure the regions and stacks to pull outputs from.
 
-```
+```yml
 dependentStacks:
   stacks:
     - region: eu-west-1
