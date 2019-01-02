@@ -28,14 +28,13 @@ dependentStacks:
   stacks:
     - region: eu-west-1
       name: slic-starter-backend-prod
-		- region: us-east-1
-			name: slic-starter-registration-prod
+    - region: us-east-1
+      name: slic-starter-registration-prod
 ```
 
 The output of `serverless package` or `serverless deploy` will show the exports that have been found and added to your provider environment variables. Export names are converted to snake case and are all upper case.
 
 4. Use the environment variables in your Lambda functions.
-
 
 ## LICENSE
 
